@@ -84,14 +84,14 @@ double invert(std::function<double(double)> func, double y)
     while(func(upper) < y)
         upper *= 2;
 
-    for(int i=0; i < 1024; i++)
+    for(int i=0; i < 10000; i++)
     {
         double lower_mu = func(lower);
         double upper_mu = func(upper);
 
         double next = (lower + upper)/2.;
 
-        if(fabs(upper_mu - lower_mu) < 1e-6)
+        if(fabs(upper_mu - lower_mu) <= 1e-16)
             return next;
 
         double x = func(next);
@@ -107,7 +107,7 @@ double invert(std::function<double(double)> func, double y)
         }
     }
 
-    return (lower + upper)/2;
+    assert(false);
 };
 
 
