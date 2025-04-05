@@ -4,6 +4,12 @@
 
 constexpr auto pi = std::numbers::pi;
 
+static
+double mix(double i1, double i2, double frac)
+{
+    return i1 * (1-frac) + i2 * frac;
+}
+
 ///https://www.seas.upenn.edu/~amyers/NaturalUnits.pdf
 //https://nssdc.gsfc.nasa.gov/planetary/factsheet/sunfact.html
 double geometric_to_msol(double meters, double m_exponent)
@@ -35,6 +41,230 @@ double geometric_to_si(double quantity, double kg_exponent, double s_exponent)
     return si_to_geometric(quantity, -kg_exponent, -s_exponent);
 }
 
+/*
+double tov::parameters::rest_mass_density_to_pressure(double rest_mass_density) const
+{
+    return K * pow(rest_mass_density, Gamma);
+}
+
+double tov::parameters::rest_mass_density_to_energy_density(double rest_mass_density) const
+{
+    double p = rest_mass_density_to_pressure(rest_mass_density);
+
+    double p0 = rest_mass_density;
+
+    return p0 + p/(Gamma-1);
+}
+
+///inverse equation of state
+///p -> p0
+double tov::parameters::pressure_to_rest_mass_density(double p) const
+{
+    return std::pow(p/K, 1/Gamma);
+}
+
+///e = p0 + P/(Gamma-1)
+double tov::parameters::pressure_to_energy_density(double p) const
+{
+    return pressure_to_rest_mass_density(p) + p / (Gamma - 1);
+}
+
+double tov::parameters::energy_density_to_pressure(double mu) const
+{
+    auto func = [&](double arg)
+    {
+        return rest_mass_density_to_energy_density(arg);
+    };
+
+    ///lets solve this numerically
+    ///mu = p0 + P/(Gamma-1)
+    double lower = 0;
+    double upper = 1;
+
+    while(func(upper) < mu)
+        upper *= 2;
+
+    for(int i=0; i < 1024; i++)
+    {
+        double lower_mu = func(lower);
+        double upper_mu = func(upper);
+
+        double next = (lower + upper)/2.;
+
+        double next_mu = func(next);
+
+        if(next_mu >= mu)
+        {
+            upper = next;
+        }
+        ///next_mu < mu
+        else
+        {
+            lower = next;
+        }
+    }
+
+    return (lower + upper)/2;
+}*/
+
+double tov::eos::numerical::mu_to_P(double mu)
+{
+    assert(mu >= 0);
+    assert(P_table.size() > 0);
+    assert(mu_table.size() > 0);
+    assert(P_table.size() == mu_table.size());
+
+    assert(mu >= mu_table.front());
+    assert(mu <= mu_table.back());
+
+    if(mu == mu_table.front())
+        return P_table.front();
+
+    if(mu == mu_table.back())
+        return P_table.back();
+
+    for(int i=0; i < (int)mu_table.size() - 1; i++)
+    {
+        double mu_1 = mu_table[i];
+        double mu_2 = mu_table[i + 1];
+
+        if(mu > mu_1 && mu <= mu_2)
+        {
+            double frac = (mu - mu_1) / (mu_2 - mu_1);
+
+            double P_1 = P_table[i];
+            double P_2 = P_table[i + 1];
+
+            return mix(P_1, P_2, frac);
+        }
+    }
+
+    assert(false);
+}
+
+double tov::eos::numerical::P_to_mu(double P)
+{
+    assert(P >= 0);
+    assert(P_table.size() > 0);
+    assert(mu_table.size() > 0);
+    assert(P_table.size() == mu_table.size());
+
+    assert(P >= P_table.front());
+    assert(P <= P_table.back());
+
+    if(P == P_table.front())
+        return mu_table.front();
+
+    if(P == P_table.back())
+        return mu_table.back();
+
+    for(int i=0; i < (int)mu_table.size() - 1; i++)
+    {
+        double P_1 = P_table[i];
+        double P_2 = P_table[i + 1];
+
+        if(P > P_1 && P <= P_2)
+        {
+            double frac = (P - P_1) / (P_2 - P_1);
+
+            double mu_1 = mu_table[i];
+            double mu_2 = mu_table[i + 1];
+
+            return mix(mu_1, mu_2, frac);
+        }
+    }
+
+    assert(false);
+}
+
+tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double max_rest_density, int N)
+{
+    tov::eos::numerical out;
+
+    auto rest_mass_density_to_pressure = [&](double rest_mass_density)
+    {
+        return K * pow(rest_mass_density, Gamma);
+    };
+
+    auto rest_mass_density_to_energy_density = [&](double rest_mass_density)
+    {
+        double p = rest_mass_density_to_pressure(rest_mass_density);
+
+        double p0 = rest_mass_density;
+
+        return p0 + p/(Gamma-1);
+    };
+
+    ///inverse equation of state
+    ///p -> p0
+    auto pressure_to_rest_mass_density = [&](double p)
+    {
+        return std::pow(p/K, 1/Gamma);
+    };
+
+    ///e = p0 + P/(Gamma-1)
+    auto pressure_to_energy_density = [&](double p)
+    {
+        return pressure_to_rest_mass_density(p) + p / (Gamma - 1);
+    };
+
+    auto energy_density_to_pressure = [&](double mu)
+    {
+        auto func = [&](double arg)
+        {
+            return rest_mass_density_to_energy_density(arg);
+        };
+
+        ///lets solve this numerically
+        ///mu = p0 + P/(Gamma-1)
+        double lower = 0;
+        double upper = 1;
+
+        while(func(upper) < mu)
+            upper *= 2;
+
+        for(int i=0; i < 1024; i++)
+        {
+            double lower_mu = func(lower);
+            double upper_mu = func(upper);
+
+            double next = (lower + upper)/2.;
+
+            double next_mu = func(next);
+
+            if(next_mu >= mu)
+            {
+                upper = next;
+            }
+            ///next_mu < mu
+            else
+            {
+                lower = next;
+            }
+        }
+
+        return (lower + upper)/2;
+    };
+
+    double max_mu = rest_mass_density_to_energy_density(max_rest_density);
+
+    out.P_table.push_back(0);
+    out.mu_table.push_back(0);
+
+    for(int i=1; i <= N; i++)
+    {
+        double frac = (double)i / N;
+
+        double mu = frac * max_mu;
+        double P = energy_density_to_pressure(mu);
+
+        out.mu_table.push_back(mu);
+        out.P_table.push_back(P);
+    }
+
+    return out;
+}
+
 template<typename T>
 inline
 T interpolate_by_radius(const std::vector<double>& radius, const std::vector<T>& quantity, double r)
@@ -62,7 +292,6 @@ T interpolate_by_radius(const std::vector<double>& radius, const std::vector<T>&
 
     return quantity.back();
 }
-
 
 double tov::parameters::rest_mass_density_to_pressure(double rest_mass_density) const
 {
@@ -242,12 +471,6 @@ tov::integration_solution tov::solve_tov(const integration_state& start, const p
     sol.M_msol = last_m;
 
     return sol;
-}
-
-static
-double mix(double i1, double i2, double frac)
-{
-    return i1 * (1-frac) + i2 * frac;
 }
 
 //personally i liked the voyage home better

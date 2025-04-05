@@ -11,6 +11,25 @@ double geometric_to_si(double quantity, double kg_exponent, double s_exponent);
 
 namespace tov
 {
+    namespace eos
+    {
+        struct numerical
+        {
+            ///linear mapping from 0 to max_mu
+            ///mu is total specific energy density
+            ///units of c=g=msol=1
+            std::vector<double> mu_table;
+            std::vector<double> P_table;
+
+            double mu_to_P(double mu);
+            double P_to_mu(double P);
+        };
+
+        ///units of c=g=msol=1
+        numerical from_polytropic(double Gamma, double K, double max_rest_density, int N = 10000);
+        //numerical from_piecewise_polytropic();
+    }
+
     ///https://colab.research.google.com/drive/1yMD2j3Y6TcsykCI59YWiW9WAMW-SPf12#scrollTo=6vWjt7CWaVyV
     ///https://www.as.utexas.edu/astronomy/education/spring13/bromm/secure/TOC_Supplement.pdf
     ///https://arxiv.org/pdf/gr-qc/0403029
