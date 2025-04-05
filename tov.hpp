@@ -15,6 +15,8 @@ namespace tov
     {
         struct numerical
         {
+            double mu_central = 0;
+
             ///linear mapping from 0 to max_mu
             ///mu is total specific energy density
             ///units of c=g=msol=1
@@ -26,7 +28,7 @@ namespace tov
         };
 
         ///units of c=g=msol=1
-        numerical from_polytropic(double Gamma, double K, double max_rest_density, int N = 10000);
+        numerical from_polytropic(double Gamma, double K, double central_rest_density, double max_rest_density, int N = 10000);
         //numerical from_piecewise_polytropic();
     }
 

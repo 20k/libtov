@@ -41,72 +41,6 @@ double geometric_to_si(double quantity, double kg_exponent, double s_exponent)
     return si_to_geometric(quantity, -kg_exponent, -s_exponent);
 }
 
-/*
-double tov::parameters::rest_mass_density_to_pressure(double rest_mass_density) const
-{
-    return K * pow(rest_mass_density, Gamma);
-}
-
-double tov::parameters::rest_mass_density_to_energy_density(double rest_mass_density) const
-{
-    double p = rest_mass_density_to_pressure(rest_mass_density);
-
-    double p0 = rest_mass_density;
-
-    return p0 + p/(Gamma-1);
-}
-
-///inverse equation of state
-///p -> p0
-double tov::parameters::pressure_to_rest_mass_density(double p) const
-{
-    return std::pow(p/K, 1/Gamma);
-}
-
-///e = p0 + P/(Gamma-1)
-double tov::parameters::pressure_to_energy_density(double p) const
-{
-    return pressure_to_rest_mass_density(p) + p / (Gamma - 1);
-}
-
-double tov::parameters::energy_density_to_pressure(double mu) const
-{
-    auto func = [&](double arg)
-    {
-        return rest_mass_density_to_energy_density(arg);
-    };
-
-    ///lets solve this numerically
-    ///mu = p0 + P/(Gamma-1)
-    double lower = 0;
-    double upper = 1;
-
-    while(func(upper) < mu)
-        upper *= 2;
-
-    for(int i=0; i < 1024; i++)
-    {
-        double lower_mu = func(lower);
-        double upper_mu = func(upper);
-
-        double next = (lower + upper)/2.;
-
-        double next_mu = func(next);
-
-        if(next_mu >= mu)
-        {
-            upper = next;
-        }
-        ///next_mu < mu
-        else
-        {
-            lower = next;
-        }
-    }
-
-    return (lower + upper)/2;
-}*/
-
 double tov::eos::numerical::mu_to_P(double mu)
 {
     assert(mu >= 0);
@@ -177,7 +111,7 @@ double tov::eos::numerical::P_to_mu(double P)
     assert(false);
 }
 
-tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double max_rest_density, int N)
+tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double central_rest_density, double max_rest_density, int N)
 {
     tov::eos::numerical out;
 
@@ -261,6 +195,8 @@ tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double max
         out.mu_table.push_back(mu);
         out.P_table.push_back(P);
     }
+
+    out.mu_central = rest_mass_density_to_energy_density(central_rest_density);
 
     return out;
 }
