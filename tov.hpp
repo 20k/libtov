@@ -15,26 +15,28 @@ namespace tov
     {
         struct numerical
         {
-            double mu_central = 0;
-
             ///linear mapping from 0 to max_mu
             ///mu is total specific energy density
             ///units of c=g=msol=1
+            std::vector<double> p0_table;
             std::vector<double> mu_table;
             std::vector<double> P_table;
 
-            double mu_to_P(double mu);
-            double P_to_mu(double P);
+            double mu_to_p0(double p0) const;
+            double p0_to_mu(double p0) const;
+            double mu_to_P(double mu) const;
+            double P_to_mu(double P) const;
         };
 
         ///units of c=g=msol=1
-        numerical from_polytropic(double Gamma, double K, double central_rest_density, double max_rest_density, int N = 10000);
+        numerical from_polytropic(double Gamma, double K, double max_rest_density, int N = 10000);
         //numerical from_piecewise_polytropic();
     }
 
     ///https://colab.research.google.com/drive/1yMD2j3Y6TcsykCI59YWiW9WAMW-SPf12#scrollTo=6vWjt7CWaVyV
     ///https://www.as.utexas.edu/astronomy/education/spring13/bromm/secure/TOC_Supplement.pdf
     ///https://arxiv.org/pdf/gr-qc/0403029
+    #if 0
     struct parameters
     {
         double K = 0;
@@ -56,6 +58,7 @@ namespace tov
 
         double energy_density_to_pressure(double e) const;
     };
+    #endif
 
     struct integration_state
     {
@@ -63,8 +66,8 @@ namespace tov
         double p = 0;
     };
 
-    integration_state make_integration_state(double p0, double min_radius, const parameters& param);
-    integration_state make_integration_state_si(double p0, double min_radius, const parameters& param);
+    integration_state make_integration_state(double central_rest_mass_density, double min_radius, const eos::numerical& param);
+    integration_state make_integration_state_si(double central_rest_mass_density, double min_radius, const eos::numerical& param);
 
     struct integration_solution
     {
@@ -82,9 +85,9 @@ namespace tov
         double R_geom() const;
     };
 
-    integration_solution solve_tov(const integration_state& start, const parameters& param, double min_radius, double min_pressure);
+    integration_solution solve_tov(const integration_state& start, const eos::numerical& param, double min_radius, double min_pressure);
     ///returns a vector of central densities in units of c=g=msol, 1/length^2
-    std::vector<double> search_for_rest_mass(double adm_mass, const parameters& param);
+    std::vector<double> search_for_rest_mass(double adm_mass, const eos::numerical& param);
 }
 
 namespace initial

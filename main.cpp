@@ -15,9 +15,11 @@ double mix(double i1, double i2, double frac)
 
 void mass_radius_curve()
 {
-    tov::parameters param;
+    /*tov::parameters param;
     param.K = 123.641;
-    param.Gamma = 2;
+    param.Gamma = 2;*/
+
+    //tov::eos::numerical param = tov::eos::from_polytropic(2, 123.641, )
 
     double adm_mass = 1.5;
 

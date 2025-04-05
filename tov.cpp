@@ -41,77 +41,62 @@ double geometric_to_si(double quantity, double kg_exponent, double s_exponent)
     return si_to_geometric(quantity, -kg_exponent, -s_exponent);
 }
 
-double tov::eos::numerical::mu_to_P(double mu)
+double table_lookup(double val, const std::vector<double>& val_is_in, const std::vector<double>& companion)
 {
-    assert(mu >= 0);
-    assert(P_table.size() > 0);
-    assert(mu_table.size() > 0);
-    assert(P_table.size() == mu_table.size());
+    assert(val >= 0);
+    assert(val_is_in.size() > 0);
+    assert(companion.size() > 0);
+    assert(val_is_in.size() == companion.size());
 
-    assert(mu >= mu_table.front());
-    assert(mu <= mu_table.back());
+    assert(val >= val_is_in.front());
+    assert(val <= val_is_in.back());
 
-    if(mu == mu_table.front())
-        return P_table.front();
+    if(val == val_is_in.front())
+        return companion.front();
 
-    if(mu == mu_table.back())
-        return P_table.back();
+    if(val == val_is_in.back())
+        return companion.back();
 
-    for(int i=0; i < (int)mu_table.size() - 1; i++)
+    for(int i=0; i < (int)companion.size() - 1; i++)
     {
-        double mu_1 = mu_table[i];
-        double mu_2 = mu_table[i + 1];
+        double v_1 = val_is_in[i];
+        double v_2 = val_is_in[i + 1];
 
-        if(mu > mu_1 && mu <= mu_2)
+        if(val > v_1 && val <= v_2)
         {
-            double frac = (mu - mu_1) / (mu_2 - mu_1);
+            double frac = (val - v_1) / (v_2 - v_1);
 
-            double P_1 = P_table[i];
-            double P_2 = P_table[i + 1];
+            double o_1 = companion[i];
+            double o_2 = companion[i + 1];
 
-            return mix(P_1, P_2, frac);
+            return mix(o_1, o_2, frac);
         }
     }
 
     assert(false);
 }
 
-double tov::eos::numerical::P_to_mu(double P)
+double tov::eos::numerical::mu_to_p0(double mu) const
 {
-    assert(P >= 0);
-    assert(P_table.size() > 0);
-    assert(mu_table.size() > 0);
-    assert(P_table.size() == mu_table.size());
-
-    assert(P >= P_table.front());
-    assert(P <= P_table.back());
-
-    if(P == P_table.front())
-        return mu_table.front();
-
-    if(P == P_table.back())
-        return mu_table.back();
-
-    for(int i=0; i < (int)mu_table.size() - 1; i++)
-    {
-        double P_1 = P_table[i];
-        double P_2 = P_table[i + 1];
-
-        if(P > P_1 && P <= P_2)
-        {
-            double frac = (P - P_1) / (P_2 - P_1);
-
-            double mu_1 = mu_table[i];
-            double mu_2 = mu_table[i + 1];
-
-            return mix(mu_1, mu_2, frac);
-        }
-    }
-
-    assert(false);
+    return table_lookup(mu, mu_table, p0_table);
 }
 
-tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double central_rest_density, double max_rest_density, int N)
+double tov::eos::numerical::p0_to_mu(double p0) const
+{
+    return table_lookup(p0, p0_table, mu_table);
+}
+
+double tov::eos::numerical::mu_to_P(double mu) const
+{
+    return table_lookup(mu, mu_table, P_table);
+}
+
+double tov::eos::numerical::P_to_mu(double P) const
+{
+    return table_lookup(P, P_table, mu_table);
+}
+
+tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double max_rest_density, int N)
 {
     tov::eos::numerical out;
 
@@ -182,8 +167,9 @@ tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double cen
 
     double max_mu = rest_mass_density_to_energy_density(max_rest_density);
 
-    out.P_table.push_back(0);
+    out.p0_table.push_back(0);
     out.mu_table.push_back(0);
+    out.P_table.push_back(0);
 
     for(int i=1; i <= N; i++)
     {
@@ -192,11 +178,10 @@ tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double cen
         double mu = frac * max_mu;
         double P = energy_density_to_pressure(mu);
 
+        out.p0_table.push_back(pressure_to_rest_mass_density(P));
         out.mu_table.push_back(mu);
         out.P_table.push_back(P);
     }
-
-    out.mu_central = rest_mass_density_to_energy_density(central_rest_density);
 
     return out;
 }
@@ -229,6 +214,7 @@ T interpolate_by_radius(const std::vector<double>& radius, const std::vector<T>&
     return quantity.back();
 }
 
+#if 0
 double tov::parameters::rest_mass_density_to_pressure(double rest_mass_density) const
 {
     return K * pow(rest_mass_density, Gamma);
@@ -293,23 +279,25 @@ double tov::parameters::energy_density_to_pressure(double mu) const
 
     return (lower + upper)/2;
 }
+#endif
 
-tov::integration_state tov::make_integration_state(double p0, double rmin, const parameters& param)
+tov::integration_state tov::make_integration_state(double central_rest_mass_density, double rmin, const eos::numerical& param)
 {
-    double e = param.rest_mass_density_to_energy_density(p0);
-    double m = (4./3.) * pi * e * std::pow(rmin, 3.);
+    double mu_c = param.p0_to_mu(central_rest_mass_density);
+
+    double m = (4./3.) * pi * mu_c * std::pow(rmin, 3.);
 
     integration_state out;
-    out.p = param.rest_mass_density_to_pressure(p0);
+    out.p = param.mu_to_P(mu_c);
     out.m = m;
     return out;
 }
 
 //p0 in si units
-tov::integration_state tov::make_integration_state_si(double p0, double rmin, const parameters& param)
+tov::integration_state tov::make_integration_state_si(double central_rest_mass_density, double rmin, const eos::numerical& param)
 {
     //kg/m^3 -> m/m^3 -> 1/m^2
-    double p0_geom = si_to_geometric(p0, 1, 0);
+    double p0_geom = si_to_geometric(central_rest_mass_density, 1, 0);
     //m^-2 -> msol^-2
     double p0_msol = geometric_to_msol(p0_geom, -2);
 
@@ -350,9 +338,9 @@ struct integration_dr
     double dp = 0;
 };
 
-integration_dr get_derivs(double r, const tov::integration_state& st, const tov::parameters& param)
+integration_dr get_derivs(double r, const tov::integration_state& st, const tov::eos::numerical& param)
 {
-    double e = param.pressure_to_energy_density(st.p);
+    double e = param.P_to_mu(st.p);
 
     double p = st.p;
     double m = st.m;
@@ -365,7 +353,7 @@ integration_dr get_derivs(double r, const tov::integration_state& st, const tov:
 }
 
 ///units are c=g=msol
-tov::integration_solution tov::solve_tov(const integration_state& start, const parameters& param, double min_radius, double min_pressure)
+tov::integration_solution tov::solve_tov(const integration_state& start,  const tov::eos::numerical& param, double min_radius, double min_pressure)
 {
     integration_state st = start;
 
@@ -379,7 +367,7 @@ tov::integration_solution tov::solve_tov(const integration_state& start, const p
 
     while(1)
     {
-        sol.energy_density.push_back(param.pressure_to_energy_density(st.p));
+        sol.energy_density.push_back(param.P_to_mu(st.p));
         sol.pressure.push_back(st.p);
         sol.cumulative_mass.push_back(st.m);
 
@@ -410,13 +398,13 @@ tov::integration_solution tov::solve_tov(const integration_state& start, const p
 }
 
 //personally i liked the voyage home better
-std::vector<double> tov::search_for_rest_mass(double adm_mass, const parameters& param)
+std::vector<double> tov::search_for_rest_mass(double adm_mass, const tov::eos::numerical& param)
 {
     double r_approx = adm_mass / 0.06;
 
     double start_E = adm_mass / ((4./3.) * pi * r_approx*r_approx*r_approx);
-    double start_P = param.energy_density_to_pressure(start_E);
-    double start_density = param.pressure_to_rest_mass_density(start_P);
+    double start_P = param.mu_to_P(start_E);
+    double start_density = param.mu_to_p0(param.P_to_mu(start_P));
 
     double rmin = 1e-6;
 
