@@ -91,6 +91,9 @@ double invert(std::function<double(double)> func, double y)
 
         double next = (lower + upper)/2.;
 
+        if(fabs(upper_mu - lower_mu) < 1e-6)
+            return next;
+
         double x = func(next);
 
         if(x >= y)
