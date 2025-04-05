@@ -10,6 +10,11 @@ double msol_to_geometric(double distance, double m_exponent);
 double si_to_geometric(double quantity, double kg_exponent, double s_exponent);
 double geometric_to_si(double quantity, double kg_exponent, double s_exponent);
 
+
+///https://colab.research.google.com/drive/1yMD2j3Y6TcsykCI59YWiW9WAMW-SPf12#scrollTo=6vWjt7CWaVyV
+///https://www.as.utexas.edu/astronomy/education/spring13/bromm/secure/TOC_Supplement.pdf
+///https://arxiv.org/pdf/gr-qc/0403029
+
 namespace tov
 {
     namespace eos
@@ -34,35 +39,11 @@ namespace tov
 
         ///units of c=g=msol=1
         numerical from_polytropic(double Gamma, double K);
+        ///https://www.as.utexas.edu/astronomy/education/spring13/bromm/secure/TOC_Supplement.pdf
+        ///https://arxiv.org/pdf/0812.2163
+        ///https://arxiv.org/pdf/2209.06052
         //numerical from_piecewise_polytropic();
     }
-
-    ///https://colab.research.google.com/drive/1yMD2j3Y6TcsykCI59YWiW9WAMW-SPf12#scrollTo=6vWjt7CWaVyV
-    ///https://www.as.utexas.edu/astronomy/education/spring13/bromm/secure/TOC_Supplement.pdf
-    ///https://arxiv.org/pdf/gr-qc/0403029
-    #if 0
-    struct parameters
-    {
-        double K = 0;
-        double Gamma = 0;
-
-        ///p0 -> p
-        ///equation of state
-        double rest_mass_density_to_pressure(double rest_mass_density) const;
-
-        ///p0 -> e
-        double rest_mass_density_to_energy_density(double rest_mass_density) const;
-
-        ///inverse equation of state
-        ///p -> p0
-        double pressure_to_rest_mass_density(double p) const;
-
-        ///e = p0 + P/(Gamma-1)
-        double pressure_to_energy_density(double p) const;
-
-        double energy_density_to_pressure(double e) const;
-    };
-    #endif
 
     struct integration_state
     {
