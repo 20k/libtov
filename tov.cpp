@@ -41,41 +41,6 @@ double geometric_to_si(double quantity, double kg_exponent, double s_exponent)
     return si_to_geometric(quantity, -kg_exponent, -s_exponent);
 }
 
-double table_lookup(double val, const std::vector<double>& val_is_in, const std::vector<double>& companion)
-{
-    assert(val >= 0);
-    assert(val_is_in.size() > 0);
-    assert(companion.size() > 0);
-    assert(val_is_in.size() == companion.size());
-
-    assert(val >= val_is_in.front());
-    assert(val <= val_is_in.back());
-
-    if(val == val_is_in.front())
-        return companion.front();
-
-    if(val == val_is_in.back())
-        return companion.back();
-
-    for(int i=0; i < (int)companion.size() - 1; i++)
-    {
-        double v_1 = val_is_in[i];
-        double v_2 = val_is_in[i + 1];
-
-        if(val > v_1 && val <= v_2)
-        {
-            double frac = (val - v_1) / (v_2 - v_1);
-
-            double o_1 = companion[i];
-            double o_2 = companion[i + 1];
-
-            return mix(o_1, o_2, frac);
-        }
-    }
-
-    assert(false);
-}
-
 double invert(std::function<double(double)> func, double y)
 {
     double lower = 0;
@@ -195,73 +160,6 @@ T interpolate_by_radius(const std::vector<double>& radius, const std::vector<T>&
 
     return quantity.back();
 }
-
-#if 0
-double tov::parameters::rest_mass_density_to_pressure(double rest_mass_density) const
-{
-    return K * pow(rest_mass_density, Gamma);
-}
-
-double tov::parameters::rest_mass_density_to_energy_density(double rest_mass_density) const
-{
-    double p = rest_mass_density_to_pressure(rest_mass_density);
-
-    double p0 = rest_mass_density;
-
-    return p0 + p/(Gamma-1);
-}
-
-///inverse equation of state
-///p -> p0
-double tov::parameters::pressure_to_rest_mass_density(double p) const
-{
-    return std::pow(p/K, 1/Gamma);
-}
-
-///e = p0 + P/(Gamma-1)
-double tov::parameters::pressure_to_energy_density(double p) const
-{
-    return pressure_to_rest_mass_density(p) + p / (Gamma - 1);
-}
-
-double tov::parameters::energy_density_to_pressure(double mu) const
-{
-    auto func = [&](double arg)
-    {
-        return rest_mass_density_to_energy_density(arg);
-    };
-
-    ///lets solve this numerically
-    ///mu = p0 + P/(Gamma-1)
-    double lower = 0;
-    double upper = 1;
-
-    while(func(upper) < mu)
-        upper *= 2;
-
-    for(int i=0; i < 1024; i++)
-    {
-        double lower_mu = func(lower);
-        double upper_mu = func(upper);
-
-        double next = (lower + upper)/2.;
-
-        double next_mu = func(next);
-
-        if(next_mu >= mu)
-        {
-            upper = next;
-        }
-        ///next_mu < mu
-        else
-        {
-            lower = next;
-        }
-    }
-
-    return (lower + upper)/2;
-}
-#endif
 
 tov::integration_state tov::make_integration_state(double central_rest_mass_density, double rmin, const eos::numerical& param)
 {
