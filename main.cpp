@@ -19,15 +19,15 @@ void mass_radius_curve()
     param.K = 123.641;
     param.Gamma = 2;*/
 
-    //tov::eos::numerical param = tov::eos::from_polytropic(2, 123.641, )
+    tov::eos::numerical param = tov::eos::from_polytropic(2, 123.641);
 
     double adm_mass = 1.5;
 
     double r_approx = adm_mass / 0.06;
 
     double start_E = adm_mass / ((4./3.) * pi * r_approx*r_approx*r_approx);
-    double start_P = param.energy_density_to_pressure(start_E);
-    double start_density = param.pressure_to_rest_mass_density(start_P);
+    double start_P = param.mu_to_P(start_E);
+    double start_density = param.P_to_p0(start_P);
 
     double rmin = 1e-6;
 
@@ -57,10 +57,7 @@ void mass_radius_curve()
 
 int main()
 {
-    tov::parameters param;
-    //param.K = 100;
-    param.K = 123.641;
-    param.Gamma = 2;
+    tov::eos::numerical param = tov::eos::from_polytropic(2, 123.641);
 
     /*return;
     auto results = tov::search_for_adm_mass(1.543, param);

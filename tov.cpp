@@ -76,36 +76,81 @@ double table_lookup(double val, const std::vector<double>& val_is_in, const std:
     assert(false);
 }
 
+double invert(std::function<double(double)> func, double y)
+{
+    double lower = 0;
+    double upper = 1;
+
+    while(func(upper) < y)
+        upper *= 2;
+
+    for(int i=0; i < 1024; i++)
+    {
+        double lower_mu = func(lower);
+        double upper_mu = func(upper);
+
+        double next = (lower + upper)/2.;
+
+        double x = func(next);
+
+        if(x >= y)
+        {
+            upper = next;
+        }
+        ///x < y
+        else
+        {
+            lower = next;
+        }
+    }
+
+    return (lower + upper)/2;
+};
+
+
 double tov::eos::numerical::mu_to_p0(double mu) const
 {
-    return table_lookup(mu, mu_table, p0_table);
+    return invert(p0_to_mu_func, mu);
 }
 
 double tov::eos::numerical::p0_to_mu(double p0) const
 {
-    return table_lookup(p0, p0_table, mu_table);
+    return p0_to_mu_func(p0);
 }
 
 double tov::eos::numerical::mu_to_P(double mu) const
 {
-    return table_lookup(mu, mu_table, P_table);
+    double p0 = invert(p0_to_mu_func, mu);
+
+    return p0_to_P_func(p0);
 }
 
 double tov::eos::numerical::P_to_mu(double P) const
 {
-    return table_lookup(P, P_table, mu_table);
+    double p0 = invert(p0_to_P_func, P);
+    return p0_to_mu_func(p0);
 }
 
-tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double max_rest_density, int N)
+double tov::eos::numerical::P_to_p0(double P) const
+{
+    return invert(p0_to_P_func, P);
+}
+
+double tov::eos::numerical::p0_to_P(double p0) const
+{
+    return p0_to_P_func(p0);
+}
+
+tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K)
 {
     tov::eos::numerical out;
 
-    auto rest_mass_density_to_pressure = [&](double rest_mass_density)
+    auto rest_mass_density_to_pressure = [=](double rest_mass_density)
     {
         return K * pow(rest_mass_density, Gamma);
     };
 
-    auto rest_mass_density_to_energy_density = [&](double rest_mass_density)
+    auto rest_mass_density_to_energy_density = [=](double rest_mass_density)
     {
         double p = rest_mass_density_to_pressure(rest_mass_density);
 
@@ -114,74 +159,8 @@ tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K, double max
         return p0 + p/(Gamma-1);
     };
 
-    ///inverse equation of state
-    ///p -> p0
-    auto pressure_to_rest_mass_density = [&](double p)
-    {
-        return std::pow(p/K, 1/Gamma);
-    };
-
-    ///e = p0 + P/(Gamma-1)
-    auto pressure_to_energy_density = [&](double p)
-    {
-        return pressure_to_rest_mass_density(p) + p / (Gamma - 1);
-    };
-
-    auto energy_density_to_pressure = [&](double mu)
-    {
-        auto func = [&](double arg)
-        {
-            return rest_mass_density_to_energy_density(arg);
-        };
-
-        ///lets solve this numerically
-        ///mu = p0 + P/(Gamma-1)
-        double lower = 0;
-        double upper = 1;
-
-        while(func(upper) < mu)
-            upper *= 2;
-
-        for(int i=0; i < 1024; i++)
-        {
-            double lower_mu = func(lower);
-            double upper_mu = func(upper);
-
-            double next = (lower + upper)/2.;
-
-            double next_mu = func(next);
-
-            if(next_mu >= mu)
-            {
-                upper = next;
-            }
-            ///next_mu < mu
-            else
-            {
-                lower = next;
-            }
-        }
-
-        return (lower + upper)/2;
-    };
-
-    double max_mu = rest_mass_density_to_energy_density(max_rest_density);
-
-    out.p0_table.push_back(0);
-    out.mu_table.push_back(0);
-    out.P_table.push_back(0);
-
-    for(int i=1; i <= N; i++)
-    {
-        double frac = (double)i / N;
-
-        double mu = frac * max_mu;
-        double P = energy_density_to_pressure(mu);
-
-        out.p0_table.push_back(pressure_to_rest_mass_density(P));
-        out.mu_table.push_back(mu);
-        out.P_table.push_back(P);
-    }
+    out.p0_to_mu_func = rest_mass_density_to_energy_density;
+    out.p0_to_P_func = rest_mass_density_to_pressure;
 
     return out;
 }

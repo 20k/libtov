@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <assert.h>
+#include <functional>
 
 double geometric_to_msol(double meters, double m_exponent);
 double msol_to_geometric(double distance, double m_exponent);
@@ -18,18 +19,21 @@ namespace tov
             ///linear mapping from 0 to max_mu
             ///mu is total specific energy density
             ///units of c=g=msol=1
-            std::vector<double> p0_table;
-            std::vector<double> mu_table;
-            std::vector<double> P_table;
+            std::function<double(double)> p0_to_mu_func;
+            std::function<double(double)> p0_to_P_func;
 
             double mu_to_p0(double p0) const;
             double p0_to_mu(double p0) const;
+
             double mu_to_P(double mu) const;
             double P_to_mu(double P) const;
+
+            double P_to_p0(double P) const;
+            double p0_to_P(double p0) const;
         };
 
         ///units of c=g=msol=1
-        numerical from_polytropic(double Gamma, double K, double max_rest_density, int N = 10000);
+        numerical from_polytropic(double Gamma, double K);
         //numerical from_piecewise_polytropic();
     }
 
