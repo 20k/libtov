@@ -2,7 +2,7 @@
 #include <cmath>
 #include <numbers>
 
-auto pi = std::numbers::pi;
+constexpr auto pi = std::numbers::pi;
 
 ///https://www.seas.upenn.edu/~amyers/NaturalUnits.pdf
 //https://nssdc.gsfc.nasa.gov/planetary/factsheet/sunfact.html
@@ -33,6 +33,34 @@ double si_to_geometric(double quantity, double kg_exponent, double s_exponent)
 double geometric_to_si(double quantity, double kg_exponent, double s_exponent)
 {
     return si_to_geometric(quantity, -kg_exponent, -s_exponent);
+}
+
+template<typename T>
+inline
+T interpolate_by_radius(const std::vector<double>& radius, const std::vector<T>& quantity, double r)
+{
+    assert(radius.size() >= 2);
+
+    if(r <= radius.front())
+        return quantity.front();
+
+    if(r >= radius.back())
+        return quantity.back();
+
+    for(int i=0; i < (int)radius.size() - 1; i++)
+    {
+        double r1 = radius[i];
+        double r2 = radius[i + 1];
+
+        if(r > r1 && r <= r2)
+        {
+            double frac = (r - r1) / (r2 - r1);
+
+            return mix(quantity[i], quantity[i + 1], frac);
+        }
+    }
+
+    return quantity.back();
 }
 
 
@@ -337,7 +365,7 @@ std::vector<double> initial::calculate_tov_phi(const tov::integration_solution& 
 
     auto isotropic_to_schwarzschild = [&](auto isotropic_in)
     {
-        return tov::interpolate_by_radius(isotropic_r, sol.radius, isotropic_in);
+        return interpolate_by_radius(isotropic_r, sol.radius, isotropic_in);
     };
 
     int samples = sol.radius.size();
