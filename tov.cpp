@@ -134,7 +134,6 @@ tov::eos::numerical tov::eos::from_polytropic(double Gamma, double K)
 }
 
 template<typename T>
-inline
 T interpolate_by_radius(const std::vector<double>& radius, const std::vector<T>& quantity, double r)
 {
     assert(radius.size() >= 2);
@@ -218,12 +217,15 @@ struct integration_dr
     double dp = 0;
 };
 
-integration_dr get_derivs(double r, const tov::integration_state& st, const tov::eos::numerical& param)
+std::optional<integration_dr> get_derivs(double r, const tov::integration_state& st, const tov::eos::numerical& param)
 {
     double e = param.P_to_mu(st.p);
 
     double p = st.p;
     double m = st.m;
+
+    if(r <= 2 * m + 1e-12)
+        return std::nullopt;
 
     integration_dr out;
 
@@ -232,8 +234,8 @@ integration_dr get_derivs(double r, const tov::integration_state& st, const tov:
     return out;
 }
 
-///units are c=g=msol
-tov::integration_solution tov::solve_tov(const integration_state& start,  const tov::eos::numerical& param, double min_radius, double min_pressure)
+///units are c=g=msol=1
+std::optional<tov::integration_solution> tov::solve_tov(const integration_state& start,  const tov::eos::numerical& param, double min_radius, double min_pressure)
 {
     integration_state st = start;
 
@@ -258,7 +260,12 @@ tov::integration_solution tov::solve_tov(const integration_state& start,  const 
         last_r = r;
         last_m = st.m;
 
-        integration_dr data = get_derivs(r, st, param);
+        std::optional<integration_dr> data_opt = get_derivs(r, st, param);
+
+        if(!data_opt.has_value())
+            return std::nullopt;
+
+        integration_dr& data = *data_opt;
 
         st.m += data.dm * dr;
         st.p += data.dp * dr;
@@ -280,6 +287,14 @@ tov::integration_solution tov::solve_tov(const integration_state& start,  const 
 //personally i liked the voyage home better
 std::vector<double> tov::search_for_rest_mass(double adm_mass, const tov::eos::numerical& param)
 {
+    //todo: this function is a mess
+    //lets imagine that all the mass were crammed into the schwarzschild radius
+    //we have a uniform density. This is the minimum radius of the neutron star
+    //so, as pc goes up, the mass : radius ratio will start to approach a black hole
+    //we can use this ratio as our upper bound
+    //schwarzschild radius = 2M
+    //the issue is, we can't really a priori know if something's a black hole
+    //need to cooperatively solve with the tov solver, as the bottom term (r * (r - 2 * m))  denotes it being a black hole
     double r_approx = adm_mass / 0.06;
 
     double start_E = adm_mass / ((4./3.) * pi * r_approx*r_approx*r_approx);
@@ -289,7 +304,7 @@ std::vector<double> tov::search_for_rest_mass(double adm_mass, const tov::eos::n
     double rmin = 1e-6;
 
     std::vector<double> densities;
-    std::vector<double> masses;
+    std::vector<std::optional<double>> masses;
 
     int to_check = 2000;
     densities.resize(to_check);
@@ -305,18 +320,29 @@ std::vector<double> tov::search_for_rest_mass(double adm_mass, const tov::eos::n
         double test_density = mix(min_density, max_density, frac);
 
         integration_state next_st = make_integration_state(test_density, rmin, param);
-        integration_solution next_sol = solve_tov(next_st, param, rmin, 0.);
+        std::optional<integration_solution> next_sol_opt = solve_tov(next_st, param, rmin, 0.);
+
+        std::optional<double> mass;
+
+        if(next_sol_opt)
+            mass = next_sol_opt->M_msol;
 
         densities[i] = test_density;
-        masses[i] = next_sol.M_msol;
+        masses[i] = mass;
     }
 
     std::vector<double> out;
 
     for(int i=0; i < to_check - 1; i++)
     {
-        double current = masses[i];
-        double next = masses[i+1];
+        if(!masses[i].has_value())
+            continue;
+
+        if(!masses[i+1].has_value())
+            continue;
+
+        double current = masses[i].value();
+        double next = masses[i+1].value();
 
         double min_mass = std::min(current, next);
         double max_mass = std::max(current, next);

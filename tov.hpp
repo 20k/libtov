@@ -4,6 +4,7 @@
 #include <vector>
 #include <assert.h>
 #include <functional>
+#include <optional>
 
 double geometric_to_msol(double meters, double m_exponent);
 double msol_to_geometric(double distance, double m_exponent);
@@ -70,7 +71,7 @@ namespace tov
         double R_geom() const;
     };
 
-    integration_solution solve_tov(const integration_state& start, const eos::numerical& param, double min_radius, double min_pressure);
+    std::optional<integration_solution> solve_tov(const integration_state& start, const eos::numerical& param, double min_radius, double min_pressure);
     ///returns a vector of central densities in units of c=g=msol, 1/length^2
     std::vector<double> search_for_rest_mass(double adm_mass, const eos::numerical& param);
 }

@@ -40,7 +40,7 @@ void mass_radius_curve()
         double test_density = mix(min_density, max_density, frac);
 
         tov::integration_state next_st = tov::make_integration_state(test_density, rmin, param);
-        tov::integration_solution next_sol = tov::solve_tov(next_st, param, rmin, 0.);
+        tov::integration_solution next_sol = tov::solve_tov(next_st, param, rmin, 0.).value();
 
         str += std::to_string(next_sol.M_msol) + ", " + std::to_string(next_sol.R_geom()/1000.) + "\n";
 
@@ -78,7 +78,7 @@ int main()
     //integration_state st = make_integration_state(p0, rmin, param);
     tov::integration_state st = tov::make_integration_state_si(paper_p0, rmin, param);
 
-    tov::integration_solution sol = tov::solve_tov(st, param, rmin, 0);
+    tov::integration_solution sol = tov::solve_tov(st, param, rmin, 0).value();
 
     std::cout << "Solved for " << sol.R_geom() / 1000. << "km " << sol.M_msol << " msols " << std::endl;
 
