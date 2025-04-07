@@ -12,7 +12,9 @@
 				<Option type="1" />
 				<Option compiler="gcc-msys2-mingw64" />
 				<Compiler>
+					<Add option="-ggdb" />
 					<Add option="-g" />
+					<Add option="-Og" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -21,12 +23,28 @@
 				<Option type="1" />
 				<Option compiler="gcc-msys2-mingw64" />
 				<Linker>
-					<Add option="-O2" />
+					<Add option="-O3" />
+				</Linker>
+			</Target>
+			<Target title="Profile">
+				<Option output="bin/Profile/libtov" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Profile/" />
+				<Option type="1" />
+				<Option compiler="gcc-msys2-mingw64" />
+				<Compiler>
+					<Add option="-pg" />
+				</Compiler>
+				<Linker>
+					<Add option="-pg -lgmon" />
+					<Add option="-no-pie" />
+					<Add option="-pg" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-std=c++26" />
+			<Add option="-g" />
+			<Add option="-no-pie" />
 		</Compiler>
 		<Unit filename="main.cpp" />
 		<Unit filename="tov.cpp" />

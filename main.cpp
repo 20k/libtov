@@ -15,7 +15,7 @@ double mix(double i1, double i2, double frac)
 
 void mass_radius_curve()
 {
-    tov::eos::numerical param = tov::eos::from_polytropic(2, 123.641);
+    tov::eos::polytrope param(2, 123.641);
 
     double adm_mass = 1.5;
 
@@ -51,38 +51,42 @@ void mass_radius_curve()
     out << str;
 }
 
-int main()
+void test_1()
 {
-    tov::eos::numerical param = tov::eos::from_polytropic(2, 123.641);
-
-    /*return;
-    auto results = tov::search_for_adm_mass(1.543, param);
-
-    for(auto& i : results)
-    {
-        std::cout << "Density " << i << std::endl;
-    }
-
-    assert(false);*/
-
-    //kg/m^3
-
+    tov::eos::polytrope param(2, 123.641);
     double paper_p0 = 6.235 * pow(10., 17.);
-
-    //this is in c=g=msol, so you'd need to use make_integration_state()
-    //double p0 = 1.28e-3;
-
 
     double rmin = 1e-6;
 
-    //integration_state st = make_integration_state(p0, rmin, param);
     tov::integration_state st = tov::make_integration_state_si(paper_p0, rmin, param);
 
     tov::integration_solution sol = tov::solve_tov(st, param, rmin, 0).value();
 
     std::cout << "Solved for " << sol.R_geom() / 1000. << "km " << sol.M_msol << " msols " << std::endl;
+}
 
-    std::vector<double> tov_phi = initial::calculate_tov_phi(sol);
+void test_2()
+{
+    ///should find 0.00100957
+    tov::eos::polytrope param(2, 123.641);
+
+    auto results = tov::search_for_rest_mass(1.543, param);
+
+    for(auto& i : results)
+    {
+        std::cout << "Density " << i << std::endl;
+    }
+}
+
+int main()
+{
+    test_1();
+
+    test_2();
+
+    //kg/m^3
+
+    //std::vector<double> tov_phi = initial::calculate_tov_phi(sol);
 
     return 0;
 }

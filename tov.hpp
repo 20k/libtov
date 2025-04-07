@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <assert.h>
-#include <functional>
 #include <optional>
+#include <cmath>
 
 double geometric_to_msol(double meters, double m_exponent);
 double msol_to_geometric(double distance, double m_exponent);
@@ -20,26 +20,88 @@ namespace tov
 {
     namespace eos
     {
-        struct numerical
+        template<typename T>
+        double invert(T&& func, double y)
         {
-            ///linear mapping from 0 to max_mu
-            ///mu is total specific energy density
-            ///units of c=g=msol=1
-            std::function<double(double)> p0_to_mu_func;
-            std::function<double(double)> p0_to_P_func;
+            double lower = 0;
+            double upper = 1;
 
-            double mu_to_p0(double p0) const;
-            double p0_to_mu(double p0) const;
+            while(func(upper) < y)
+                upper *= 2;
 
-            double mu_to_P(double mu) const;
-            double P_to_mu(double P) const;
+            for(int i=0; i < 10000; i++)
+            {
+                double lower_mu = func(lower);
+                double upper_mu = func(upper);
 
-            double P_to_p0(double P) const;
-            double p0_to_P(double p0) const;
+                double next = 0.5 * lower + 0.5 * upper;
+
+                if(std::fabs(upper - lower) <= 1e-11)
+                    return next;
+
+                //hit the limits of precision
+                if(next == upper || next == lower)
+                    return next;
+
+                double x = func(next);
+
+                if(x >= y)
+                {
+                    upper = next;
+                }
+                ///x < y
+                else
+                {
+                    lower = next;
+                }
+            }
+
+            assert(false);
+        };
+
+        struct base
+        {
+            virtual double mu_to_p0(double mu) const{
+                return invert(
+                [&](double y){
+                    return p0_to_mu(y);
+                }, mu);
+            };
+
+            virtual double p0_to_mu(double p0) const = 0;
+
+            virtual double mu_to_P(double mu) const{return p0_to_P(mu_to_p0(mu));};
+            virtual double P_to_mu(double P) const{return p0_to_mu(P_to_p0(P));};
+
+            virtual double P_to_p0(double P) const{
+                return invert(
+                [&](double y){
+                    return p0_to_P(y);
+                }, P);
+            };
+
+            virtual double p0_to_P(double p0) const = 0;
+        };
+
+        struct polytrope : base
+        {
+            double Gamma = 0;
+            double K = 0;
+
+            polytrope(float _Gamma, float _K) : Gamma(_Gamma), K(_K) {}
+
+            //virtual double mu_to_p0(double p0) const override;
+            virtual double p0_to_mu(double p0) const override;
+
+            //virtual double mu_to_P(double mu) const override;
+            //virtual double P_to_mu(double P) const override;
+
+            //virtual double P_to_p0(double P) const override;
+            virtual double p0_to_P(double p0) const override;
         };
 
         ///units of c=g=msol=1
-        numerical from_polytropic(double Gamma, double K);
+        //numerical from_polytropic(double Gamma, double K);
         ///https://www.as.utexas.edu/astronomy/education/spring13/bromm/secure/TOC_Supplement.pdf
         ///https://arxiv.org/pdf/0812.2163
         ///https://arxiv.org/pdf/2209.06052
@@ -52,8 +114,8 @@ namespace tov
         double p = 0;
     };
 
-    integration_state make_integration_state(double central_rest_mass_density, double min_radius, const eos::numerical& param);
-    integration_state make_integration_state_si(double central_rest_mass_density, double min_radius, const eos::numerical& param);
+    integration_state make_integration_state(double central_rest_mass_density, double min_radius, const eos::base& param);
+    integration_state make_integration_state_si(double central_rest_mass_density, double min_radius, const eos::base& param);
 
     struct integration_solution
     {
@@ -71,9 +133,9 @@ namespace tov
         double R_geom() const;
     };
 
-    std::optional<integration_solution> solve_tov(const integration_state& start, const eos::numerical& param, double min_radius, double min_pressure);
+    std::optional<integration_solution> solve_tov(const integration_state& start, const eos::base& param, double min_radius, double min_pressure);
     ///returns a vector of central densities in units of c=g=msol, 1/length^2
-    std::vector<double> search_for_rest_mass(double adm_mass, const eos::numerical& param);
+    std::vector<double> search_for_rest_mass(double adm_mass, const eos::base& param);
 }
 
 namespace initial
