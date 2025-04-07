@@ -50,6 +50,11 @@ double tov::eos::polytrope::p0_to_mu(double p0) const
     return p0 + P / (Gamma - 1);
 }
 
+double tov::eos::polytrope::P_to_p0(double P) const
+{
+    return pow(P/K, 1/Gamma);
+}
+
 double tov::eos::polytrope::p0_to_P(double p0) const
 {
     return K * pow(p0, Gamma);
@@ -141,6 +146,8 @@ struct integration_dr
 
 std::optional<integration_dr> get_derivs(double r, const tov::integration_state& st, const tov::eos::base& param)
 {
+    std::optional<integration_dr> out;
+
     double e = param.P_to_mu(st.p);
 
     double p = st.p;
@@ -148,12 +155,12 @@ std::optional<integration_dr> get_derivs(double r, const tov::integration_state&
 
     //black hole + numerical error
     if(r <= 2 * m + 1e-12)
-        return std::nullopt;
+        return out;
 
-    integration_dr out;
+    out.emplace();
 
-    out.dm = 4 * pi * e * std::pow(r, 2.);
-    out.dp = -(e + p) * (m + 4 * pi * r*r*r * p) / (r * (r - 2 * m));
+    out->dm = 4 * pi * e * std::pow(r, 2.);
+    out->dp = -(e + p) * (m + 4 * pi * r*r*r * p) / (r * (r - 2 * m));
     return out;
 }
 
@@ -182,12 +189,6 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
 
         sol.radius.push_back(r);
 
-        /*if((i % 1000) == 0)
-        //if(i > 10000)
-            printf("R %.24f m %.24f\n", r, st.m);
-
-        i++;*/
-
         last_r = r;
         last_m = st.m;
 
@@ -207,16 +208,12 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
 
         if(st.p <= min_pressure)
         {
-            //printf("Pressure broke\n");
             break;
         }
     }
 
-    //printf("Fr %.24f %.24f min %.24f\n", last_r, last_m, min_radius);
-
     if(last_r <= min_radius * 100 || last_m < 0.0001f)
     {
-        //printf("Nope\n");
         return std::nullopt;
     }
 
@@ -227,102 +224,21 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
 }
 
 //personally i liked the voyage home better
-std::vector<double> tov::search_for_rest_mass(double adm_mass, const tov::eos::base& param)
+std::vector<double> tov::search_for_rest_mass(double mass, const tov::eos::base& param)
 {
-    //todo: this function is a mess
-    //lets imagine that all the mass were crammed into the schwarzschild radius
-    //we have a uniform density. This is the minimum radius of the neutron star
-    //so, as pc goes up, the mass : radius ratio will start to approach a black hole
-    //we can use this ratio as our upper bound
-    //schwarzschild radius = 2M
-    //the issue is, we can't really a priori know if something's a black hole
-    //need to cooperatively solve with the tov solver, as the bottom term (r * (r - 2 * m))  denotes it being a black hole
-    /*double r_approx = adm_mass / 0.06;
-
-    double start_E = adm_mass / ((4./3.) * pi * r_approx*r_approx*r_approx);
-    double start_P = param.mu_to_P(start_E);
-    double start_density = param.mu_to_p0(param.P_to_mu(start_P));*/
-
-    /*double rmin = 1e-6;
-
-    double min_density = 0;
-    double max_density = 0;
-
-    {
-        double r_approx = adm_mass / 0.06;
-
-        double start_E = adm_mass / ((4./3.) * pi * r_approx*r_approx*r_approx);
-        double start_P = param.mu_to_P(start_E);
-        double start_density = param.mu_to_p0(param.P_to_mu(start_P));
-
-        double d1 = start_density;
-        double d2 = start_density;
-
-        //std::cout << "d1 " << d1 << std::endl;
-
-        tov::integration_state st1 = make_integration_state(d1, rmin, param);
-
-        tov::integration_solution sol1 = tov::solve_tov(st1, param, rmin, 0.f).value();
-
-        tov::integration_state st2 = make_integration_state(d2, rmin, param);
-        std::optional<tov::integration_solution> sol2 = tov::solve_tov(st2, param, rmin, 0.f);
-
-        while(sol2)
-        {
-            d2 *= 2;
-
-            printf("Testing density %.24f\n", d2);
-
-            st2 = make_integration_state(d2, rmin, param);
-            sol2 = tov::solve_tov(st2, param, rmin, 0.f);
-        }
-
-        printf("d Min %.24f max %.24f\n", d1, d2);
-
-        //assert(false);
-
-        ///in theory, d1 is valid, d2 is schwarzschild. We want to find the exact bound which is valid, and use that as max density
-
-        for(int i=0; i < 128; i++)
-        {
-            double next = (d1 + d2) / 2.;
-
-            tov::integration_state st = make_integration_state(next, rmin, param);
-            auto tov_next = tov::solve_tov(st, param, rmin, 0.f);
-
-            if(tov_next)
-            {
-                d1 = next;
-            }
-            else
-            {
-                d2 = next;
-            }
-        }
-
-        min_density = 0;
-        max_density = d2;
-    }*/
-
     double rmin = 1e-6;
     double min_density = 0.f;
-    double max_density = 1.f;
-
-    printf("Min %.24f max %.24f\n", min_density, max_density);
-
-    //assert(false);
+    double max_density = 0.1f;
 
     std::vector<double> densities;
     std::vector<std::optional<double>> masses;
 
-    int to_check = 2000;
+    int to_check = 200;
     densities.resize(to_check);
     masses.resize(to_check);
 
     for(int i=0; i < to_check; i++)
     {
-        printf("Checking %i\n", i);
-
         double frac = (double)i / to_check;
 
         double test_density = mix(min_density, max_density, frac);
@@ -355,11 +271,26 @@ std::vector<double> tov::search_for_rest_mass(double adm_mass, const tov::eos::b
         double min_mass = std::min(current, next);
         double max_mass = std::max(current, next);
 
-        if(adm_mass >= min_mass && adm_mass < max_mass)
+        if(mass >= min_mass && mass < max_mass)
         {
-            double frac = (adm_mass - min_mass) / (max_mass - min_mass);
+            //printf("dens %.24f %.24f\n", densities[i], densities[i+1]);
 
-            out.push_back(mix(densities[i], densities[i+1], frac));
+            //printf("Check mass %.24f\n", mass);
+
+            auto get_mass = [&](double density_in){
+                integration_state st = make_integration_state(density_in, rmin, param);
+                integration_solution next_sol = solve_tov(st, param, rmin, 0.).value();
+
+                //printf("%.24f mass\n", next_sol.M_msol);
+
+                return next_sol.M_msol;
+            };
+
+            double refined = tov::invert(get_mass, mass, densities[i], densities[i + 1], false);
+
+            //printf("Refined %.24f\n", refined);
+
+            out.push_back(refined);
         }
     }
 

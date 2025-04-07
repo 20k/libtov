@@ -11,54 +11,60 @@ double msol_to_geometric(double distance, double m_exponent);
 double si_to_geometric(double quantity, double kg_exponent, double s_exponent);
 double geometric_to_si(double quantity, double kg_exponent, double s_exponent);
 
-
 ///https://colab.research.google.com/drive/1yMD2j3Y6TcsykCI59YWiW9WAMW-SPf12#scrollTo=6vWjt7CWaVyV
 ///https://www.as.utexas.edu/astronomy/education/spring13/bromm/secure/TOC_Supplement.pdf
 ///https://arxiv.org/pdf/gr-qc/0403029
 
 namespace tov
 {
-    namespace eos
+    template<typename T>
+    double invert(T&& func, double y, double lower = 0, double upper = 1, bool should_search = true)
     {
-        template<typename T>
-        double invert(T&& func, double y)
+        if(should_search)
         {
-            double lower = 0;
-            double upper = 1;
-
+            //assumes upper > lower
             while(func(upper) < y)
                 upper *= 2;
+        }
 
-            for(int i=0; i < 10000; i++)
+        for(int i=0; i < 10000; i++)
+        {
+            double lower_mu = func(lower);
+            double upper_mu = func(upper);
+
+            double next = 0.5 * lower + 0.5 * upper;
+
+            if(std::fabs(upper - lower) <= 1e-14)
+                return next;
+
+            //hit the limits of precision
+            if(next == upper || next == lower)
+                return next;
+
+            double x = func(next);
+
+            if(upper_mu >= lower_mu)
             {
-                double lower_mu = func(lower);
-                double upper_mu = func(upper);
-
-                double next = 0.5 * lower + 0.5 * upper;
-
-                if(std::fabs(upper - lower) <= 1e-11)
-                    return next;
-
-                //hit the limits of precision
-                if(next == upper || next == lower)
-                    return next;
-
-                double x = func(next);
-
                 if(x >= y)
-                {
                     upper = next;
-                }
                 ///x < y
                 else
-                {
                     lower = next;
-                }
             }
+            else
+            {
+                if(x >= y)
+                    lower = next;
+                else
+                    upper = next;
+            }
+        }
 
-            assert(false);
-        };
+        assert(false);
+    };
 
+    namespace eos
+    {
         struct base
         {
             virtual double mu_to_p0(double mu) const{
@@ -83,6 +89,7 @@ namespace tov
             virtual double p0_to_P(double p0) const = 0;
         };
 
+        //units of c=g=msol=1
         struct polytrope : base
         {
             double Gamma = 0;
@@ -96,16 +103,14 @@ namespace tov
             //virtual double mu_to_P(double mu) const override;
             //virtual double P_to_mu(double P) const override;
 
-            //virtual double P_to_p0(double P) const override;
+            virtual double P_to_p0(double P) const override;
             virtual double p0_to_P(double p0) const override;
         };
 
-        ///units of c=g=msol=1
-        //numerical from_polytropic(double Gamma, double K);
+        ///polytropic stuff
         ///https://www.as.utexas.edu/astronomy/education/spring13/bromm/secure/TOC_Supplement.pdf
         ///https://arxiv.org/pdf/0812.2163
         ///https://arxiv.org/pdf/2209.06052
-        //numerical from_piecewise_polytropic();
     }
 
     struct integration_state
