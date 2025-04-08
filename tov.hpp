@@ -87,6 +87,8 @@ namespace tov
             };
 
             virtual double p0_to_P(double p0) const = 0;
+
+            virtual ~base(){}
         };
 
         //units of c=g=msol=1
