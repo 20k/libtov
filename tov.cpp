@@ -177,45 +177,42 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
     double last_r = 0;
     double last_m = 0;
 
-    //int i = 0;
-
     while(1)
     {
+        //save current integration state
         sol.energy_density.push_back(param.P_to_mu(st.p));
         sol.pressure.push_back(st.p);
         sol.cumulative_mass.push_back(st.m);
+        sol.radius.push_back(current_r);
 
-        double r = current_r;
-
-        sol.radius.push_back(r);
-
-        last_r = r;
+        last_r = current_r;
         last_m = st.m;
 
-        std::optional<integration_dr> data_opt = get_derivs(r, st, param);
+        std::optional<integration_dr> data_opt = get_derivs(current_r, st, param);
 
+        //oops, black hole!
         if(!data_opt.has_value())
             return std::nullopt;
 
         integration_dr& data = *data_opt;
 
+        //euler integration
         st.m += data.dm * dr;
         st.p += data.dp * dr;
         current_r += dr;
 
+        //something bad happened
         if(!std::isfinite(st.m) || !std::isfinite(st.p))
             return std::nullopt;
 
+        //success!
         if(st.p <= min_pressure)
-        {
             break;
-        }
     }
 
+    //sanity checks
     if(last_r <= min_radius * 100 || last_m < 0.0001f)
-    {
         return std::nullopt;
-    }
 
     sol.R_msol = last_r;
     sol.M_msol = last_m;
