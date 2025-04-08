@@ -273,22 +273,14 @@ std::vector<double> tov::search_for_rest_mass(double mass, const tov::eos::base&
 
         if(mass >= min_mass && mass < max_mass)
         {
-            //printf("dens %.24f %.24f\n", densities[i], densities[i+1]);
-
-            //printf("Check mass %.24f\n", mass);
-
             auto get_mass = [&](double density_in){
                 integration_state st = make_integration_state(density_in, rmin, param);
                 integration_solution next_sol = solve_tov(st, param, rmin, 0.).value();
-
-                //printf("%.24f mass\n", next_sol.M_msol);
 
                 return next_sol.M_msol;
             };
 
             double refined = tov::invert(get_mass, mass, densities[i], densities[i + 1], false);
-
-            //printf("Refined %.24f\n", refined);
 
             out.push_back(refined);
         }

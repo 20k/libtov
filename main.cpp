@@ -17,18 +17,10 @@ void mass_radius_curve()
 {
     tov::eos::polytrope param(2, 123.641);
 
-    double adm_mass = 1.5;
-
-    double r_approx = adm_mass / 0.06;
-
-    double start_E = adm_mass / ((4./3.) * pi * r_approx*r_approx*r_approx);
-    double start_P = param.mu_to_P(start_E);
-    double start_density = param.P_to_p0(start_P);
-
     double rmin = 1e-6;
 
-    double min_density = start_density / 100;
-    double max_density = start_density * 2000;
+    double min_density = 0;
+    double max_density = 0.1;
     int to_check = 20000;
 
     std::string str = "Mass, Radius\n";
@@ -40,7 +32,12 @@ void mass_radius_curve()
         double test_density = mix(min_density, max_density, frac);
 
         tov::integration_state next_st = tov::make_integration_state(test_density, rmin, param);
-        tov::integration_solution next_sol = tov::solve_tov(next_st, param, rmin, 0.).value();
+        auto next_sol_opt = tov::solve_tov(next_st, param, rmin, 0.);
+
+        if(!next_sol_opt)
+            continue;
+
+        tov::integration_solution& next_sol = *next_sol_opt;
 
         str += std::to_string(next_sol.M_msol) + ", " + std::to_string(next_sol.R_geom()/1000.) + "\n";
 
@@ -80,6 +77,8 @@ void test_2()
 
 int main()
 {
+    //mass_radius_curve();
+
     test_1();
 
     test_2();
