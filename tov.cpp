@@ -148,7 +148,7 @@ std::optional<integration_dr> get_derivs(double r, const tov::integration_state&
 {
     std::optional<integration_dr> out;
 
-    double e = param.P_to_mu(st.p);
+    double mu = param.P_to_mu(st.p);
 
     double p = st.p;
     double m = st.m;
@@ -159,8 +159,8 @@ std::optional<integration_dr> get_derivs(double r, const tov::integration_state&
 
     out.emplace();
 
-    out->dm = 4 * pi * e * std::pow(r, 2.);
-    out->dp = -(e + p) * (m + 4 * pi * r*r*r * p) / (r * (r - 2 * m));
+    out->dm = 4 * pi * mu * std::pow(r, 2.);
+    out->dp = -(mu + p) * (m + 4 * pi * r*r*r * p) / (r * (r - 2 * m));
     return out;
 }
 
