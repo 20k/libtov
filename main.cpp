@@ -67,7 +67,7 @@ void test_2()
     ///should find 0.00100957
     tov::eos::polytrope param(2, 123.641);
 
-    auto results = tov::search_for_rest_mass(1.543, param);
+    auto results = tov::search_for_adm_mass(1.543, param);
 
     for(auto& i : results)
     {
@@ -75,11 +75,27 @@ void test_2()
     }
 }
 
+///https://arxiv.org/pdf/gr-qc/0110047
+void test_3()
+{
+    tov::eos::polytrope param(2, 100);
+    double paper_p0 = 8 * pow(10., -3.);
+
+    double rmin = 1e-6;
+
+    tov::integration_state st = tov::make_integration_state(paper_p0, rmin, param);
+
+    tov::integration_solution sol = tov::solve_tov(st, param, rmin, 0).value();
+
+    std::cout << "Solved for " << sol.R_geom() / 1000. << "km " << sol.M_msol << " msols m0: " << sol.M0_msol() << " msols " << std::endl;
+}
+
 int main()
 {
     //mass_radius_curve();
 
     test_1();
+    test_3();
 
     test_2();
 

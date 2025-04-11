@@ -122,6 +122,39 @@ double tov::integration_solution::R_geom() const
     return msol_to_geometric(R_msol, 1);
 }
 
+double tov::integration_solution::R_iso_msol() const
+{
+    return initial::calculate_isotropic_r(*this).back();
+}
+
+double tov::integration_solution::R_iso_geom() const
+{
+    return msol_to_geometric(R_iso_msol(), 1);
+}
+
+double tov::integration_solution::M0_msol() const
+{
+    double current = 0;
+    double last_r = 0;
+
+    for(int i=0; i < radius.size(); i++)
+    {
+        double r = radius[i];
+        double dr = r - last_r;
+
+        current += (4 * pi * r*r * rest_density[i] / sqrt(1 - 2 * cumulative_mass[i] / r)) * dr;
+
+        last_r = r;
+    }
+
+    return current;
+}
+
+double tov::integration_solution::M0_geom() const
+{
+    return msol_to_geometric(M0_msol(), 1);
+}
+
 int tov::integration_solution::radius_to_index(double r) const
 {
     assert(radius.size() > 0);
@@ -180,6 +213,7 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
     while(1)
     {
         //save current integration state
+        sol.rest_density.push_back(param.P_to_p0(st.p));
         sol.energy_density.push_back(param.P_to_mu(st.p));
         sol.pressure.push_back(st.p);
         sol.cumulative_mass.push_back(st.m);
@@ -221,7 +255,7 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
 }
 
 //personally i liked the voyage home better
-std::vector<double> tov::search_for_rest_mass(double mass, const tov::eos::base& param)
+std::vector<double> tov::search_for_adm_mass(double mass, const tov::eos::base& param)
 {
     double rmin = 1e-6;
     double min_density = 0.f;

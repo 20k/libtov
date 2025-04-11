@@ -129,6 +129,7 @@ namespace tov
         double M_msol = 0;
         double R_msol = 0;
 
+        std::vector<double> rest_density;
         std::vector<double> energy_density;
         std::vector<double> pressure;
         std::vector<double> cumulative_mass;
@@ -138,11 +139,16 @@ namespace tov
 
         double M_geom() const;
         double R_geom() const;
+        double R_iso_msol() const;
+        double R_iso_geom() const;
+
+        double M0_msol() const;
+        double M0_geom() const;
     };
 
     std::optional<integration_solution> solve_tov(const integration_state& start, const eos::base& param, double min_radius, double min_pressure);
     ///returns a vector of central densities in units of c=g=msol, 1/length^2
-    std::vector<double> search_for_rest_mass(double adm_mass, const eos::base& param);
+    std::vector<double> search_for_adm_mass(double adm_mass, const eos::base& param);
 }
 
 namespace initial
