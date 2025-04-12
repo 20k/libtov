@@ -322,20 +322,6 @@ std::vector<double> tov::search_for_adm_mass(double mass, const tov::eos::base& 
 
 std::vector<double> initial::calculate_isotropic_r(const tov::integration_solution& sol)
 {
-    std::vector<double> dlog_dr;
-    dlog_dr.reserve(sol.cumulative_mass.size());
-
-    for(int i=0; i < (int)sol.cumulative_mass.size(); i++)
-    {
-        double r = sol.radius[i];
-        double m = sol.cumulative_mass[i];
-
-        double rhs = (1 - sqrtf(1 - 2 * m/r)) / (r * sqrt(1 - 2 * m/r));
-
-        //double rhs = (pow(r, 0.5) - pow(r - 2 * m, 0.5)) / (r * pow(r - 2 * m, 0.5));
-        dlog_dr.push_back(rhs);
-    }
-
     std::vector<double> r_hat;
     double last_r = 0;
     double log_rhat_r = 0;
@@ -343,12 +329,13 @@ std::vector<double> initial::calculate_isotropic_r(const tov::integration_soluti
     for(int i=0; i < (int)sol.radius.size(); i++)
     {
         double r = sol.radius[i];
+        double m = sol.cumulative_mass[i];
 
         double dr = r - last_r;
 
-        log_rhat_r += dr * dlog_dr[i];
+        double rhs = (1 - sqrt(1 - 2 * m/r)) / (r * sqrt(1 - 2 * m/r));
 
-        //std::cout << "step size " << dr * dlog_dr[i] << std::endl;
+        log_rhat_r += dr * rhs;
 
         double lr_hat = exp(log_rhat_r);
 
