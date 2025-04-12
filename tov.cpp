@@ -364,12 +364,6 @@ std::vector<double> initial::calculate_isotropic_r(const tov::integration_soluti
 std::vector<double> initial::calculate_tov_phi(const tov::integration_solution& sol)
 {
     auto isotropic_r = calculate_isotropic_r(sol);
-
-    auto isotropic_to_schwarzschild = [&](auto isotropic_in)
-    {
-        return interpolate_by_radius(isotropic_r, sol.radius, isotropic_in);
-    };
-
     int samples = sol.radius.size();
 
     std::vector<double> phi;
@@ -381,6 +375,11 @@ std::vector<double> initial::calculate_tov_phi(const tov::integration_solution& 
     }
 
     #if 0
+    auto isotropic_to_schwarzschild = [&](auto isotropic_in)
+    {
+        return interpolate_by_radius(isotropic_r, sol.radius, isotropic_in);
+    };
+
     double check_mass = 0;
     double last_r_bar = 0;
 
