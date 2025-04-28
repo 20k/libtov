@@ -203,7 +203,7 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
     integration_state st = start;
 
     double current_r = min_radius;
-    double dr = 1. / 1024.;
+    double dr = 0.1 / 1024.;
 
     integration_solution sol;
 
