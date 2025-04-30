@@ -149,6 +149,7 @@ namespace tov
     std::optional<integration_solution> solve_tov(const integration_state& start, const eos::base& param, double min_radius, double min_pressure);
     ///returns a vector of central densities in units of c=g=msol, 1/length^2
     std::vector<double> search_for_adm_mass(double adm_mass, const eos::base& param);
+    std::vector<double> search_for_rest_mass(double rest_mass, const eos::base& param);
 }
 
 namespace initial

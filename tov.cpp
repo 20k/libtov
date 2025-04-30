@@ -254,12 +254,12 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
     return sol;
 }
 
-//personally i liked the voyage home better
-std::vector<double> tov::search_for_adm_mass(double mass, const tov::eos::base& param)
+template<typename T>
+std::vector<double> search_for_mass(double mass, T&& get_mass)
 {
     double rmin = 1e-6;
-    double min_density = 0.f;
-    double max_density = 0.1f;
+    double min_density = 0.;
+    double max_density = 0.1;
 
     std::vector<double> densities;
     std::vector<std::optional<double>> masses;
@@ -274,13 +274,7 @@ std::vector<double> tov::search_for_adm_mass(double mass, const tov::eos::base& 
 
         double test_density = mix(min_density, max_density, frac);
 
-        integration_state next_st = make_integration_state(test_density, rmin, param);
-        std::optional<integration_solution> next_sol_opt = solve_tov(next_st, param, rmin, 0.);
-
-        std::optional<double> mass;
-
-        if(next_sol_opt)
-            mass = next_sol_opt->M_msol;
+        std::optional<double> mass = get_mass(test_density);
 
         densities[i] = test_density;
         masses[i] = mass;
@@ -304,20 +298,48 @@ std::vector<double> tov::search_for_adm_mass(double mass, const tov::eos::base& 
 
         if(mass >= min_mass && mass < max_mass)
         {
-            auto get_mass = [&](double density_in){
-                integration_state st = make_integration_state(density_in, rmin, param);
-                integration_solution next_sol = solve_tov(st, param, rmin, 0.).value();
-
-                return next_sol.M_msol;
+            auto get_cmass = [&](double in) {
+                return get_mass(in).value();
             };
 
-            double refined = tov::invert(get_mass, mass, densities[i], densities[i + 1], false);
+            double refined = tov::invert(get_cmass, mass, densities[i], densities[i + 1], false);
 
             out.push_back(refined);
         }
     }
 
     return out;
+}
+
+//personally i liked the voyage home better
+std::vector<double> tov::search_for_adm_mass(double mass, const tov::eos::base& param)
+{
+    auto get_mass = [&](double density_in) -> std::optional<double> {
+        integration_state st = make_integration_state(density_in, 1e-6, param);
+        auto next_sol_opt = solve_tov(st, param, 1e-6, 0.);
+
+        if(!next_sol_opt)
+            return std::nullopt;
+
+        return next_sol_opt->M_msol;
+    };
+
+    return search_for_mass(mass, get_mass);
+}
+
+std::vector<double> tov::search_for_rest_mass(double mass, const tov::eos::base& param)
+{
+    auto get_mass = [&](double density_in) -> std::optional<double> {
+        integration_state st = make_integration_state(density_in, 1e-6, param);
+        auto next_sol_opt = solve_tov(st, param, 1e-6, 0.);
+
+        if(!next_sol_opt)
+            return std::nullopt;
+
+        return next_sol_opt->M0_msol();
+    };
+
+    return search_for_mass(mass, get_mass);
 }
 
 std::vector<double> initial::calculate_isotropic_r(const tov::integration_solution& sol)
