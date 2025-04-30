@@ -203,7 +203,7 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
     integration_state st = start;
 
     double current_r = min_radius;
-    double dr = 0.1 / 1024.;
+    double dr = 1. / 1024.;
 
     integration_solution sol;
 
@@ -255,6 +255,7 @@ std::optional<tov::integration_solution> tov::solve_tov(const integration_state&
 }
 
 template<typename T>
+inline
 std::vector<double> search_for_mass(double mass, T&& get_mass)
 {
     double rmin = 1e-6;
@@ -318,10 +319,12 @@ std::vector<double> tov::search_for_adm_mass(double mass, const tov::eos::base& 
         integration_state st = make_integration_state(density_in, 1e-6, param);
         auto next_sol_opt = solve_tov(st, param, 1e-6, 0.);
 
-        if(!next_sol_opt)
-            return std::nullopt;
+        std::optional<double> ret;
 
-        return next_sol_opt->M_msol;
+        if(next_sol_opt)
+            ret = next_sol_opt->M_msol;
+
+        return ret;
     };
 
     return search_for_mass(mass, get_mass);
@@ -333,10 +336,12 @@ std::vector<double> tov::search_for_rest_mass(double mass, const tov::eos::base&
         integration_state st = make_integration_state(density_in, 1e-6, param);
         auto next_sol_opt = solve_tov(st, param, 1e-6, 0.);
 
-        if(!next_sol_opt)
-            return std::nullopt;
+        std::optional<double> ret;
 
-        return next_sol_opt->M0_msol();
+        if(next_sol_opt)
+            ret = next_sol_opt->M0_msol();
+
+        return ret;
     };
 
     return search_for_mass(mass, get_mass);

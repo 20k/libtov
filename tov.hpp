@@ -18,6 +18,7 @@ double geometric_to_si(double quantity, double kg_exponent, double s_exponent);
 namespace tov
 {
     template<typename T>
+    inline
     double invert(T&& func, double y, double lower = 0, double upper = 1, bool should_search = true)
     {
         if(should_search)
@@ -27,12 +28,12 @@ namespace tov
                 upper *= 2;
         }
 
+        double lower_mu = func(lower);
+        double upper_mu = func(upper);
+
         for(int i=0; i < 10000; i++)
         {
-            double lower_mu = func(lower);
-            double upper_mu = func(upper);
-
-            double next = 0.5 * lower + 0.5 * upper;
+            double next = (lower + upper) * 0.5;
 
             if(std::fabs(upper - lower) <= 1e-14)
                 return next;
@@ -46,17 +47,29 @@ namespace tov
             if(upper_mu >= lower_mu)
             {
                 if(x >= y)
+                {
                     upper = next;
+                    upper_mu = func(upper);
+                }
                 ///x < y
                 else
+                {
                     lower = next;
+                    lower_mu = func(lower);
+                }
             }
             else
             {
                 if(x >= y)
+                {
                     lower = next;
+                    lower_mu = func(lower);
+                }
                 else
+                {
                     upper = next;
+                    upper_mu = func(upper);
+                }
             }
         }
 
