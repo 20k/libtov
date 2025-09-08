@@ -7,7 +7,7 @@
 constexpr auto pi = std::numbers::pi;
 
 static
-double mix(double i1, double i2, double frac)
+double tmix(double i1, double i2, double frac)
 {
     return i1 * (1-frac) + i2 * frac;
 }
@@ -80,7 +80,7 @@ T interpolate_by_radius(const std::vector<double>& radius, const std::vector<T>&
         {
             double frac = (r - r1) / (r2 - r1);
 
-            return mix(quantity[i], quantity[i + 1], frac);
+            return tmix(quantity[i], quantity[i + 1], frac);
         }
     }
 
@@ -273,7 +273,7 @@ std::vector<double> search_for_mass(double mass, T&& get_mass)
     {
         double frac = (double)i / to_check;
 
-        double test_density = mix(min_density, max_density, frac);
+        double test_density = tmix(min_density, max_density, frac);
 
         std::optional<double> mass = get_mass(test_density);
 
